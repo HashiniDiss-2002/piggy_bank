@@ -24,8 +24,25 @@
       overflow-y: auto;
     }
 
-    .card input,
-    .card select {
+    .card img {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+    }
+
+    .card h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      color: rgb(223, 106, 125);
+    }
+
+    .card h2 {
+      margin-bottom: 20px;
+      font-size: 22px;
+      color: #333;
+    }
+
+    .card input {
       width: 80%;
       padding: 10px;
       margin: 10px 0;
@@ -53,6 +70,10 @@
       background-color: rgb(100, 181, 246);
     }
 
+    .card button:hover {
+      opacity: 0.9;
+    }
+
     .hidden {
       display: none;
     }
@@ -73,208 +94,141 @@
       border-bottom: 1px solid #ddd;
       text-align: left;
     }
+
+    select, input[type=number] {
+      width: 80%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
+  <!-- Login / Signup -->
+  <div id="auth-section" class="card">
+    <img src="" alt="Piggy Bank Logo" />
+    <h1>Piggy Bank</h1>
+    <h2>Login / Signup</h2>
+    <input type="email" id="email" placeholder="Email"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button class="login-btn" onclick="login()">Login</button>
+    <button class="signup-btn" onclick="signup()">Signup</button>
+  </div>
 
-<!-- Auth Section -->
-<div id="auth-section" class="card">
-  <h1>Piggy Bank</h1>
-  <h2>Login / Signup</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button class="login-btn" onclick="login()">Login</button>
-  <button class="signup-btn" onclick="signup()">Signup</button>
-</div>
+  <!-- Dashboard -->
+  <div id="dashboard" class="card hidden">
+    <h1>Piggy Bank Dashboard</h1>
+    <button class="login-btn" onclick="logout()">Logout</button>
 
-<!-- Dashboard -->
-<div id="dashboard" class="card hidden">
-  <h1>Piggy Bank Dashboard</h1>
-  <button class="login-btn" onclick="logout()">Logout</button>
+    <h3>Categories</h3>
+    <ul id="category-list"></ul>
+    <input type="text" id="new-category" placeholder="New Category">
+    <button class="signup-btn" onclick="addCategory()">Add Category</button>
 
-  <h3>Categories</h3>
-  <ul id="category-list"></ul>
-  <input type="text" id="new-category" placeholder="New Category">
-  <button class="signup-btn" onclick="addCategory()">Add Category</button>
+    <h3>Add Expense</h3>
+    <input type="text" id="expense-name" placeholder="Expense Name"><br>
+    <input type="number" id="expense-amount" placeholder="Amount"><br>
+    <select id="category-select"></select><br>
+    <button class="signup-btn" onclick="addExpense()">Add Expense</button>
 
-  <h3>Add Expense</h3>
-  <input type="text" id="expense-name" placeholder="Expense Name">
-  <input type="number" id="expense-amount" placeholder="Amount">
-  <select id="category-select"></select>
-  <button class="signup-btn" onclick="addExpense()">Add Expense</button>
+    <h3>Expenses History</h3>
+    <ul id="expense-list"></ul>
+  </div>
 
-  <h3>Expenses History</h3>
-  <ul id="expense-list"></ul>
-</div>
+  <script type="module">
+    // Keep Firebase app initialized for analytics (optional, can remove if you want)
+    //import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    //import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js";
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-analytics.js";
-  import {
-    getAuth,
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut
-  } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
-  import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDoc,
-    getDocs,
-    doc,
-    updateDoc,
-    serverTimestamp,
-    query,
-    orderBy
-  } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    //const firebaseConfig = {
+      //apiKey: "AIzaSyB03PiDFmzdKIGJsl9mBdSqjqcYQallUTk",
+      //authDomain: "piggybank-da942.firebaseapp.com",
+     // projectId: "piggybank-da942",
+    //  storageBucket: "piggybank-da942.firebasestorage.app",
+      //messagingSenderId: "270202155163",
+    //  appId: "1:270202155163:web:09e87be83fecc7fdbe163e",
+  //    measurementId: "G-B8QG7CDZ8J"
+    //};
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB03PiDFmzdKIGJsl9mBdSqjqcYQallUTk",
-    authDomain: "piggybank-da942.firebaseapp.com",
-    projectId: "piggybank-da942",
-    storageBucket: "piggybank-da942.appspot.com",
-    messagingSenderId: "270202155163",
-    appId: "1:270202155163:web:09e87be83fecc7fdbe163e",
-    measurementId: "G-B8QG7CDZ8J"
-  };
+   // const app = initializeApp(firebaseConfig);
+   // const analytics = getAnalytics(app);
 
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+    // --- Local Authentication ---
 
-  const authSection = document.getElementById("auth-section");
-  const dashboard = document.getElementById("dashboard");
-  const categoryList = document.getElementById("category-list");
-  const categorySelect = document.getElementById("category-select");
-  const expenseList = document.getElementById("expense-list");
+    const VALID_EMAIL = "user@example.com";
+    const VALID_PASSWORD = "password123";
 
-  // Authentication
-  async function signup() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      alert("Signup Error: " + err.message);
+    const authSection = document.getElementById("auth-section");
+    const dashboard = document.getElementById("dashboard");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const categoryList = document.getElementById("category-list");
+    const categorySelect = document.getElementById("category-select");
+    const expenseList = document.getElementById("expense-list");
+
+    let loggedIn = false;
+
+    // Signup disabled, just alert
+    function signup() {
+      alert("Signup is disabled in this local demo. Please use the fixed credentials to login.");
     }
-  }
 
-  async function login() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      alert("Login Error: " + err.message);
+    function login() {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (email === VALID_EMAIL && password === VALID_PASSWORD) {
+        loggedIn = true;
+        authSection.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+
+        // Load any data if you want here (currently no DB, so lists empty)
+        loadCategories();
+        loadExpenses();
+      } else {
+        alert("Invalid email or password.");
+      }
     }
-  }
 
-  async function logout() {
-    await signOut(auth);
-  }
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      authSection.classList.add("hidden");
-      dashboard.classList.remove("hidden");
-      loadCategories();
-      loadExpenses();
-    } else {
+    function logout() {
+      loggedIn = false;
       authSection.classList.remove("hidden");
       dashboard.classList.add("hidden");
+      emailInput.value = "";
+      passwordInput.value = "";
     }
-  });
 
-  // Categories
-  async function loadCategories() {
-    categoryList.innerHTML = "";
-    categorySelect.innerHTML = "<option value=''>No Category</option>";
+    // Stub functions for categories and expenses since no Firebase DB
 
-    try {
-      const snap = await getDocs(collection(db, "users", auth.currentUser.uid, "categories"));
-      snap.forEach(docSnap => {
-        const c = docSnap.data();
-        categoryList.innerHTML += `<li>${c.name} - $${c.current_amount ?? 0}</li>`;
-        categorySelect.innerHTML += `<option value="${docSnap.id}">${c.name}</option>`;
-      });
-    } catch (err) {
-      console.error("Error loading categories:", err);
+    function loadCategories() {
+      // Clear existing lists
+      categoryList.innerHTML = "";
+      categorySelect.innerHTML = "<option value=''>No Category</option>";
+      // No DB: you can implement localStorage or just keep empty for now
     }
-  }
 
-  async function addCategory() {
-    const name = document.getElementById("new-category").value.trim();
-    if (!name) return alert("Enter a category name.");
-    try {
-      await addDoc(collection(db, "users", auth.currentUser.uid, "categories"), {
-        name,
-        current_amount: 0,
-        created_at: serverTimestamp()
-      });
-      document.getElementById("new-category").value = "";
-      loadCategories();
-    } catch (err) {
-      console.error("Add Category Error:", err);
+    function addCategory() {
+      alert("Add category disabled without backend.");
     }
-  }
 
-  // Expenses
-  async function loadExpenses() {
-    expenseList.innerHTML = "";
-    try {
-      const q = query(collection(db, "users", auth.currentUser.uid, "expenses"), orderBy("created_at", "desc"));
-      const snap = await getDocs(q);
-      snap.forEach(docSnap => {
-        const e = docSnap.data();
-        const categoryName = categorySelect.querySelector(`option[value='${e.categoryId}']`)?.text || "No Category";
-        expenseList.innerHTML += `<li>${e.name} - $${e.amount} (${categoryName})</li>`;
-      });
-    } catch (err) {
-      console.error("Load Expenses Error:", err);
+    function loadExpenses() {
+      expenseList.innerHTML = "";
+      // No DB: keep empty for now
     }
-  }
 
-  async function addExpense() {
-    const name = document.getElementById("expense-name").value.trim();
-    const amount = parseFloat(document.getElementById("expense-amount").value);
-    const categoryId = document.getElementById("category-select").value;
+    function addExpense() {
+      alert("Add expense disabled without backend.");
+    }
 
-    if (!name || isNaN(amount)) return alert("Enter valid expense name and amount.");
-
-    try {
-      await addDoc(collection(db, "users", auth.currentUser.uid, "expenses"), {
-        name,
-        amount,
-        categoryId: categoryId || null,
-        created_at: serverTimestamp()
-      });
-
-      if (categoryId) {
-        const catRef = doc(db, "users", auth.currentUser.uid, "categories", categoryId);
-        const catSnap = await getDoc(catRef);
-        const catData = catSnap.data();
-        await updateDoc(catRef, {
-          current_amount: (catData.current_amount || 0) - amount
-        });
+    // On load show login screen by default
+    window.onload = () => {
+      if (!loggedIn) {
+        authSection.classList.remove("hidden");
+        dashboard.classList.add("hidden");
       }
-
-      // Clear form
-      document.getElementById("expense-name").value = "";
-      document.getElementById("expense-amount").value = "";
-      document.getElementById("category-select").value = "";
-
-      loadCategories();
-      loadExpenses();
-    } catch (err) {
-      console.error("Add Expense Error:", err);
-    }
-  }
-</script>
-
+    };
+  </script>
 </body>
 </html>
-
