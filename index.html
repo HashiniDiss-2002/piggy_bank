@@ -137,141 +137,136 @@
     <ul id="expense-list"></ul>
   </div>
 
-  <script type="module">
-    // Local authentication demo — fixed credentials only
-    const VALID_EMAIL = "user@example.com";
-    const VALID_PASSWORD = "password123";
+  <script>
+  // Local authentication demo — fixed credentials only
+  const VALID_EMAIL = "user@example.com";
+  const VALID_PASSWORD = "password123";
 
-    // State
-    let loggedIn = false;
+  // State
+  let loggedIn = false;
 
-    // DOM elements
-    const authSection = document.getElementById("auth-section");
-    const dashboard = document.getElementById("dashboard");
+  // DOM elements
+  const authSection = document.getElementById("auth-section");
+  const dashboard = document.getElementById("dashboard");
 
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
 
-    const categoryList = document.getElementById("category-list");
-    const categorySelect = document.getElementById("category-select");
-    const expenseList = document.getElementById("expense-list");
+  const categoryList = document.getElementById("category-list");
+  const categorySelect = document.getElementById("category-select");
+  const expenseList = document.getElementById("expense-list");
 
-    // Data (local only, no backend)
-    let categories = [];
-    let expenses = [];
+  // Data (local only, no backend)
+  let categories = [];
+  let expenses = [];
 
-    // Signup function (disabled)
-    function signup() {
-      alert("Signup is disabled in this demo. Use:\nEmail: user@example.com\nPassword: password123");
-    }
+  // Signup function (disabled)
+  function signup() {
+    alert("Signup is disabled in this demo. Use:\nEmail: user@example.com\nPassword: password123");
+  }
 
-    // Login function
-    function login() {
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
+  // Login function
+  function login() {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
 
-      if (email === VALID_EMAIL && password === VALID_PASSWORD) {
-        loggedIn = true;
-        authSection.classList.add("hidden");
-        dashboard.classList.remove("hidden");
-
-        loadCategories();
-        loadExpenses();
-      } else {
-        alert("Invalid email or password.");
-      }
-    }
-
-    // Logout function
-    function logout() {
-      loggedIn = false;
-      authSection.classList.remove("hidden");
-      dashboard.classList.add("hidden");
-      emailInput.value = "";
-      passwordInput.value = "";
-      categories = [];
-      expenses = [];
-    }
-
-    // Load categories into list and select
-    function loadCategories() {
-      categoryList.innerHTML = "";
-      categorySelect.innerHTML = "<option value=''>No Category</option>";
-
-      categories.forEach((c, idx) => {
-        categoryList.innerHTML += `<li>${c.name} - $${c.current_amount.toFixed(2)}</li>`;
-        categorySelect.innerHTML += `<option value="${idx}">${c.name}</option>`;
-      });
-    }
-
-    // Add category locally
-    function addCategory() {
-      const name = document.getElementById("new-category").value.trim();
-      if (!name) return alert("Enter a category name!");
-
-      // Check duplicate
-      if (categories.find(c => c.name.toLowerCase() === name.toLowerCase())) {
-        return alert("Category already exists!");
-      }
-
-      categories.push({ name, current_amount: 0 });
-      document.getElementById("new-category").value = "";
-      loadCategories();
-    }
-
-    // Load expenses into list
-    function loadExpenses() {
-      expenseList.innerHTML = "";
-
-      expenses.forEach((e) => {
-        const categoryName = e.categoryId === "" || e.categoryId === null
-          ? "No Category"
-          : (categories[e.categoryId]?.name || "No Category");
-
-        expenseList.innerHTML += `<li>${e.name} - $${e.amount.toFixed(2)} (${categoryName})</li>`;
-      });
-    }
-
-    // Add expense locally
-    function addExpense() {
-      const name = document.getElementById("expense-name").value.trim();
-      const amountStr = document.getElementById("expense-amount").value.trim();
-      const amount = parseFloat(amountStr);
-      const categoryId = document.getElementById("category-select").value;
-
-      if (!name || isNaN(amount) || amount <= 0) {
-        return alert("Enter valid expense name and amount!");
-      }
-
-      expenses.unshift({ name, amount, categoryId: categoryId || null });
-
-      // Update category amount if category selected
-      if (categoryId !== "") {
-        categories[categoryId].current_amount -= amount;
-      }
-
-      // Clear inputs
-      document.getElementById("expense-name").value = "";
-      document.getElementById("expense-amount").value = "";
-      document.getElementById("category-select").value = "";
+    if (email === VALID_EMAIL && password === VALID_PASSWORD) {
+      loggedIn = true;
+      authSection.classList.add("hidden");
+      dashboard.classList.remove("hidden");
 
       loadCategories();
       loadExpenses();
+    } else {
+      alert("Invalid email or password.");
+    }
+  }
+
+  // Logout function
+  function logout() {
+    loggedIn = false;
+    authSection.classList.remove("hidden");
+    dashboard.classList.add("hidden");
+    emailInput.value = "";
+    passwordInput.value = "";
+    categories = [];
+    expenses = [];
+  }
+
+  // Load categories into list and select
+  function loadCategories() {
+    categoryList.innerHTML = "";
+    categorySelect.innerHTML = "<option value=''>No Category</option>";
+
+    categories.forEach((c, idx) => {
+      categoryList.innerHTML += `<li>${c.name} - $${c.current_amount.toFixed(2)}</li>`;
+      categorySelect.innerHTML += `<option value="${idx}">${c.name}</option>`;
+    });
+  }
+
+  // Add category locally
+  function addCategory() {
+    const name = document.getElementById("new-category").value.trim();
+    if (!name) return alert("Enter a category name!");
+
+    // Check duplicate
+    if (categories.find(c => c.name.toLowerCase() === name.toLowerCase())) {
+      return alert("Category already exists!");
     }
 
-    // Expose functions globally so inline onclick works
-    window.login = login;
-    window.signup = signup;
-    window.logout = logout;
-    window.addCategory = addCategory;
-    window.addExpense = addExpense;
+    categories.push({ name, current_amount: 0 });
+    document.getElementById("new-category").value = "";
+    loadCategories();
+  }
 
-    // On page load
-    window.onload = () => {
-      loggedIn = false;
-      authSection.classList.remove("hidden");
-      dashboard.classList.add("hidden");
-    };
-  </script>
+  // Load expenses into list
+  function loadExpenses() {
+    expenseList.innerHTML = "";
+
+    expenses.forEach((e) => {
+      const categoryName = e.categoryId === "" || e.categoryId === null
+        ? "No Category"
+        : (categories[e.categoryId]?.name || "No Category");
+
+      expenseList.innerHTML += `<li>${e.name} - $${e.amount.toFixed(2)} (${categoryName})</li>`;
+    });
+  }
+
+  // Add expense locally
+  function addExpense() {
+    const name = document.getElementById("expense-name").value.trim();
+    const amountStr = document.getElementById("expense-amount").value.trim();
+    const amount = parseFloat(amountStr);
+    const categoryId = document.getElementById("category-select").value;
+
+    if (!name || isNaN(amount) || amount <= 0) {
+      return alert("Enter valid expense name and amount!");
+    }
+
+    expenses.unshift({ name, amount, categoryId: categoryId || null });
+
+    // Update category amount if category selected
+    if (categoryId !== "") {
+      categories[categoryId].current_amount -= amount;
+    }
+
+    // Clear inputs
+    document.getElementById("expense-name").value = "";
+    document.getElementById("expense-amount").value = "";
+    document.getElementById("category-select").value = "";
+
+    loadCategories();
+    loadExpenses();
+  }
+
+  // On page load
+  window.onload = () => {
+    loggedIn = false;
+    authSection.classList.remove("hidden");
+    dashboard.classList.add("hidden");
+  };
+</script>
+
 </body>
 </html>
+
