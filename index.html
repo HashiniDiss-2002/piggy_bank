@@ -103,7 +103,13 @@
       border: 1px solid #ccc;
       font-size: 16px;
     }
+
   </style>
+
+  <!-- Firebase CDN scripts -->
+  <script src="https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js"></script>
 </head>
 <body>
   <!-- Login -->
@@ -114,7 +120,6 @@
     <input type="email" id="email" placeholder="Email"><br>
     <input type="password" id="password" placeholder="Password"><br>
     <button class="login-btn" onclick="login()">Login</button>
-    <button class="signup-btn" onclick="signup()">Signup</button>
   </div>
 
   <!-- Dashboard -->
@@ -137,136 +142,170 @@
     <ul id="expense-list"></ul>
   </div>
 
-  <script>
-  // Local authentication demo — fixed credentials only
-  const VALID_EMAIL = "user@example.com";
-  const VALID_PASSWORD = "password123";
+<script>
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyB03PiDFmzdKIGJsl9mBdSqjqcYQallUTk",
+    authDomain: "piggybank-da942.firebaseapp.com",
+    projectId: "piggybank-da942",
+    storageBucket: "piggybank-da942.appspot.com",
+    messagingSenderId: "270202155163",
+    appId: "1:270202155163:web:09e87be83fecc7fdbe163e",
+    measurementId: "G-B8QG7CDZ8J"
+  };
 
-  // State
-  let loggedIn = false;
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
 
-  // DOM elements
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
   const authSection = document.getElementById("auth-section");
   const dashboard = document.getElementById("dashboard");
-
-  const emailInput = document.getElementById("email");
-  const passwordInput = document.getElementById("password");
-
   const categoryList = document.getElementById("category-list");
   const categorySelect = document.getElementById("category-select");
   const expenseList = document.getElementById("expense-list");
 
-  // Data (local only, no backend)
-  let categories = [];
-  let expenses = [];
-
-  // Signup function (disabled)
-  function signup() {
-    alert("Signup is disabled in this demo. Use:\nEmail: user@example.com\nPassword: password123");
-  }
-
   // Login function
   function login() {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    if (email === VALID_EMAIL && password === VALID_PASSWORD) {
-      loggedIn = true;
-      authSection.classList.add("hidden");
-      dashboard.classList.remove("hidden");
-
-      loadCategories();
-      loadExpenses();
-    } else {
-      alert("Invalid email or password.");
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return;
     }
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        // Successful login handled by onAuthStateChanged listener
+      })
+      .catch(error => alert(error.message));
   }
 
   // Logout function
   function logout() {
-    loggedIn = false;
-    authSection.classList.remove("hidden");
-    dashboard.classList.add("hidden");
-    emailInput.value = "";
-    passwordInput.value = "";
-    categories = [];
-    expenses = [];
+    auth.signOut()
+      .then(() => {
+        // Successful logout handled by onAuthStateChanged listener
+      })
+      .catch(error => alert(error.message));
   }
 
-  // Load categories into list and select
-  function loadCategories() {
+  // Auth state listener
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      authSection.classList.add("hidden");
+      dashboard.classList.remove("hidden");
+
+      await loadCategories(user.uid);
+      await loadExpenses(user.uid);
+    } else {
+      authSection.classList.remove("hidden");
+      dashboard.classList.add("hidden");
+
+      // Clear UI
+      categoryList.innerHTML = "";
+      expenseList.innerHTML = "";
+      categorySelect.innerHTML = "<option value=''>No Category</option>";
+
+      document.getElementById("email").value = "";
+      document.getElementById("password").value = "";
+    }
+  });
+
+  // Load categories from Firestore
+  async function loadCategories(userId) {
     categoryList.innerHTML = "";
     categorySelect.innerHTML = "<option value=''>No Category</option>";
 
-    categories.forEach((c, idx) => {
-      categoryList.innerHTML += `<li>${c.name} - $${c.current_amount.toFixed(2)}</li>`;
-      categorySelect.innerHTML += `<option value="${idx}">${c.name}</option>`;
+    const colRef = db.collection("users").doc(userId).collection("categories");
+    const snapshot = await colRef.get();
+
+    snapshot.forEach(docSnap => {
+      const c = docSnap.data();
+      categoryList.innerHTML += `<li>${c.name} - $${c.current_amount || 0}</li>`;
+      categorySelect.innerHTML += `<option value="${docSnap.id}">${c.name}</option>`;
     });
   }
 
-  // Add category locally
-  function addCategory() {
+  // Add a new category
+  async function addCategory() {
+    const user = auth.currentUser;
+    if (!user) return alert("Not logged in");
+
     const name = document.getElementById("new-category").value.trim();
     if (!name) return alert("Enter a category name!");
 
-    // Check duplicate
-    if (categories.find(c => c.name.toLowerCase() === name.toLowerCase())) {
-      return alert("Category already exists!");
-    }
+    const colRef = db.collection("users").doc(user.uid).collection("categories");
+    await colRef.add({
+      name,
+      current_amount: 0,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
-    categories.push({ name, current_amount: 0 });
     document.getElementById("new-category").value = "";
-    loadCategories();
+    await loadCategories(user.uid);
   }
 
-  // Load expenses into list
-  function loadExpenses() {
+  // Load expenses from Firestore
+  async function loadExpenses(userId) {
     expenseList.innerHTML = "";
 
-    expenses.forEach((e) => {
-      const categoryName = e.categoryId === "" || e.categoryId === null
-        ? "No Category"
-        : (categories[e.categoryId]?.name || "No Category");
+    const expensesRef = db.collection("users").doc(userId).collection("expenses").orderBy("created_at", "desc");
+    const snap = await expensesRef.get();
 
-      expenseList.innerHTML += `<li>${e.name} - $${e.amount.toFixed(2)} (${categoryName})</li>`;
+    snap.forEach(docSnap => {
+      const e = docSnap.data();
+      const categoryName = categorySelect.querySelector(`option[value='${e.categoryId}']`)?.text || "No Category";
+      expenseList.innerHTML += `<li>${e.name} - $${e.amount} (${categoryName})</li>`;
     });
   }
 
-  // Add expense locally
-  function addExpense() {
+  // Add a new expense
+  async function addExpense() {
+    const user = auth.currentUser;
+    if (!user) return alert("Not logged in");
+
     const name = document.getElementById("expense-name").value.trim();
-    const amountStr = document.getElementById("expense-amount").value.trim();
-    const amount = parseFloat(amountStr);
+    const amount = parseFloat(document.getElementById("expense-amount").value);
     const categoryId = document.getElementById("category-select").value;
 
-    if (!name || isNaN(amount) || amount <= 0) {
-      return alert("Enter valid expense name and amount!");
+    if (!name || isNaN(amount)) {
+      alert("Enter valid expense name and amount!");
+      return;
     }
 
-    expenses.unshift({ name, amount, categoryId: categoryId || null });
+    const expensesRef = db.collection("users").doc(user.uid).collection("expenses");
+    await expensesRef.add({
+      name,
+      amount,
+      categoryId: categoryId || null,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
 
-    // Update category amount if category selected
-    if (categoryId !== "") {
-      categories[categoryId].current_amount -= amount;
+    // Update category's current_amount if applicable
+    if (categoryId) {
+      const catRef = db.collection("users").doc(user.uid).collection("categories").doc(categoryId);
+      const catDoc = await catRef.get();
+      if (catDoc.exists) {
+        const catData = catDoc.data();
+        await catRef.update({ current_amount: (catData.current_amount || 0) - amount });
+      }
     }
 
-    // Clear inputs
     document.getElementById("expense-name").value = "";
     document.getElementById("expense-amount").value = "";
     document.getElementById("category-select").value = "";
 
-    loadCategories();
-    loadExpenses();
+    await loadCategories(user.uid);
+    await loadExpenses(user.uid);
   }
 
-  // On page load
-  window.onload = () => {
-    loggedIn = false;
-    authSection.classList.remove("hidden");
-    dashboard.classList.add("hidden");
-  };
-</script>
+  // Expose functions globally for inline onclick handlers
+  window.login = login;
+  window.logout = logout;
+  window.addCategory = addCategory;
+  window.addExpense = addExpense;
 
+</script>
 </body>
 </html>
-
